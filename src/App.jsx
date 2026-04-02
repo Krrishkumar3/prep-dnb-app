@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { useSheetData } from './hooks/useSheetData';
 import Header from './components/Header';
 import HomeScreen from './components/HomeScreen';
@@ -10,26 +10,8 @@ import ExamScreen from './components/ExamScreen';
 function AppContent() {
   const [examType, setExamType] = useState('DNB');
   const { tree, loading, usingDemo, cacheInfo, refresh } = useSheetData();
-  const location = useLocation();
 
   const isDNB = examType === 'DNB';
-
-  // Derive header title from path
-  const pathParts = location.pathname.split('/').filter(Boolean);
-  const getHeaderInfo = () => {
-    if (pathParts[0] === 'subject') {
-      const subject = decodeURIComponent(pathParts[1] || '');
-      if (pathParts[2] === 'session' && pathParts[5] === 'paper') {
-        return { title: subject, subtitle: `Paper ${pathParts[6]} · ${decodeURIComponent(pathParts[4])} ${pathParts[3]}` };
-      }
-      if (pathParts[2] === 'session' && pathParts[3] && pathParts[4]) {
-        return { title: subject, subtitle: `${decodeURIComponent(pathParts[4])} ${pathParts[3]}` };
-      }
-      return { title: subject, subtitle: `${examType} Questions` };
-    }
-    return { title: '', subtitle: '' };
-  };
-  const { title, subtitle } = getHeaderInfo();
 
   return (
     <div
@@ -44,8 +26,6 @@ function AppContent() {
       <Header
         examType={examType}
         onToggle={() => setExamType(t => t === 'DNB' ? 'DipNB' : 'DNB')}
-        title={title}
-        subtitle={subtitle}
       />
 
       <Routes>
