@@ -1,0 +1,170 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  --dnb-primary: #F472B6;
+  --dnb-soft: #FDF2F8;
+  --dnb-card: #FFF0F7;
+  --dnb-accent: #EC4899;
+  --dnb-gradient-from: #FDF2F8;
+  --dnb-gradient-to: #FCE7F3;
+
+  --dipnb-primary: #60A5FA;
+  --dipnb-soft: #EFF6FF;
+  --dipnb-card: #F0F7FF;
+  --dipnb-accent: #3B82F6;
+  --dipnb-gradient-from: #EFF6FF;
+  --dipnb-gradient-to: #DBEAFE;
+
+  --font-sf: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shadow-soft: 0 2px 16px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+  --shadow-card: 0 4px 24px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.04);
+  --shadow-hover: 0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  font-family: var(--font-sf);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #F8FAFC;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Smooth page transitions */
+.page-enter {
+  animation: slideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.page-back-enter {
+  animation: slideBack 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes slideBack {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Card hover animations */
+.subject-card {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+
+.subject-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: var(--shadow-hover);
+}
+
+.subject-card:active {
+  transform: scale(0.97);
+  transition: transform 0.1s ease;
+}
+
+/* Paper-like exam view */
+.exam-paper {
+  background: #FFFFFF;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+}
+
+/* Custom scrollbar */  
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+
+/* Toggle switch */
+.toggle-bg { transition: background-color 0.3s ease; }
+.toggle-thumb { transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Skeleton loading */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #F0F4F8 25%, #E8EEF4 50%, #F0F4F8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Question item */
+.question-item {
+  border-left: 3px solid transparent;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.question-item:hover {
+  border-left-color: var(--dnb-accent);
+  background: #FAFAFA;
+}
+
+.question-item.dipnb:hover {
+  border-left-color: var(--dipnb-accent);
+}
+
+/* Search input */
+.search-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
+}
+
+.search-input.dipnb:focus {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+/* Badge */
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* Back button */
+.back-btn {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.back-btn:hover { opacity: 0.7; transform: translateX(-2px); }
+.back-btn:active { transform: scale(0.95); }
+
+/* Paper card */
+.paper-card {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+}
+.paper-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+}
+.paper-card:active { transform: scale(0.96); }
+
+/* Smooth scroll */
+.smooth-scroll { scroll-behavior: smooth; }
+
+/* Fixed header backdrop blur */
+.header-blur {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
