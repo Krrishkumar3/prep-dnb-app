@@ -21,7 +21,7 @@ export function parseCSV(csvText) {
       marks: parseInt(row['marks'] || '5', 10),
       pdfLink: row['pdf_link'] || row['pdflink'] || '',
     };
-  }).filter(r => r.subject && (r.questionText || r.pdfLink));
+  }).filter(r => r.subject && (r.questionText || r.pdfLink || r.year));
 }
 
 function parseCSVRow(line) {

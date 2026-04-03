@@ -20,7 +20,10 @@ export default function ExamScreen({ examType, tree }) {
   const subjectInfo = SUBJECTS.find(s => s.name === subject);
   const questions   = getQuestions(tree, subject, examType, year, decodedSession, parseInt(paper, 10));
   const totalMarks  = questions.reduce((a, q) => a + (q.marks || 5), 0);
-  const pdfLink     = questions[0]?.pdfLink || null;
+
+  // ── Get pdfLink directly from the tree (works even when questions array is empty) ──
+  const paperNode = tree?.[subject]?.[examType]?.[year]?.[decodedSession]?.[parseInt(paper, 10)];
+  const pdfLink   = paperNode?.pdfLink || questions[0]?.pdfLink || null;
 
   /* ── PDF Modal ─────────────────────────────────────── */
   const PdfModal = () => (
@@ -169,19 +172,85 @@ export default function ExamScreen({ examType, tree }) {
 
         {/* ── Questions ─────────────────────────────────── */}
         {questions.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-3">📭</div>
-            <p className="text-gray-500 font-semibold">No questions for this paper</p>
-            {pdfLink && (
-              <button
-                onClick={() => setPdfOpen(true)}
-                className="mt-4 text-sm font-bold px-5 py-2.5 rounded-xl text-white"
+          pdfLink ? (
+            /* PDF-only paper: show embedded viewer prominently */
+            <div className="exam-paper rounded-2xl overflow-hidden" style={{ minHeight: 520 }}>
+              <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center gap-2">
+                <div className="w-1 h-4 rounded-full" style={{ background: primary }} />
+                <h3 className="font-bold text-gray-700 text-sm uppercase tracking-widest">
+                  Question Paper
+                </h3>
+                <span className="ml-auto badge" style={{ background: accent, color: primary }}>
+                  PDF Only
+                </span>
+              </div>
+
+              <div className="p-5 flex flex-col items-center gap-4">
+                <div
+                  className="rounded-2xl p-5 w-full text-center"
+                  style={{ background: accent, border: `1px solid ${border}` }}
+                >
+                  <div className="text-4xl mb-3">📄</div>
+                  <p className="font-bold text-gray-700 text-sm mb-1">
+                    This paper is available as a PDF
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4">
+                    Question text has not been digitised yet. View the original PDF below.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                    <button
+                      onClick={() => setPdfOpen(true)}
+                      className="flex items-center justify-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl text-white transition-opacity hover:opacity-90"
+                      style={{ background: primary }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                      Open PDF Viewer
+                    </button>
+                    <a
+                      href={pdfLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl transition-opacity hover:opacity-80"
+                      style={{ background: soft, color: primary }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                      Open in New Tab
+                    </a>
+                  </div>
+                </div>
+
+                {/* Embedded PDF preview */}
+                <iframe
+                  src={pdfLink}
+                  className="w-full rounded-xl border border-gray-100"
+                  style={{ height: 480 }}
+                  title={`${subject} Paper ${paper} ${decodedSession} ${year}`}
+                />
+              </div>
+            </div>
+          ) : (
+            /* No PDF either – truly empty */
+            <div className="text-center py-16">
+              <div className="text-5xl mb-3">📭</div>
+              <p className="text-gray-500 font-semibold">No questions for this paper</p>
+              <a
+                href="https://natboard.edu.in/dnb_old_qp"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-block text-sm font-bold px-5 py-2.5 rounded-xl text-white"
                 style={{ background: primary }}
               >
-                View Original PDF
-              </button>
-            )}
-          </div>
+                Browse NBEMS ↗
+              </a>
+            </div>
+          )
         ) : (
           <div className="exam-paper rounded-2xl overflow-hidden">
             <div className="px-4 sm:px-6 py-4 border-b border-gray-100 flex items-center gap-2">
