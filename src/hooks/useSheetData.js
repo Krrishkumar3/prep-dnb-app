@@ -76,8 +76,18 @@ export function useSheetData() {
     }
 
     // 3. Fall back to bundled application data
-    const organized = organizeData(bundledData);
-    setData(bundledData);
+    const mappedBundledData = bundledData.map(r => ({
+      subject: r.Subject || r.subject,
+      year: r.Year || r.year,
+      session: r.Session || r.session,
+      examType: r.ExamType || r.examType,
+      paperNumber: r.PaperNumber || r.paperNumber,
+      pdfLink: r.PDF_Link || r.pdfLink,
+      questionText: r.QuestionText || r.questionText || '',
+      marks: r.Marks || r.marks || 5
+    }));
+    const organized = organizeData(mappedBundledData);
+    setData(mappedBundledData);
     setTree(organized);
     setUsingDemo(false);
     setCacheInfo('Using bundled application data (live sheet unavailable)');
