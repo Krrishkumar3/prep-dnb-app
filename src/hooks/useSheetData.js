@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { parseCSV, organizeData, SAMPLE_DATA } from '../utils/dataParser';
 import { getCached, setCache } from '../utils/cache';
+import bundledData from '../../scraper/nbems_question_papers.json';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Replace SHEET_ID with your published Google Sheet ID
@@ -74,12 +75,12 @@ export function useSheetData() {
       }
     }
 
-    // 3. Fall back to built-in sample data
-    const organized = organizeData(SAMPLE_DATA);
-    setData(SAMPLE_DATA);
+    // 3. Fall back to bundled application data
+    const organized = organizeData(bundledData);
+    setData(bundledData);
     setTree(organized);
-    setUsingDemo(true);
-    setCacheInfo('Using demo data — add your Sheet ID to show real data');
+    setUsingDemo(false);
+    setCacheInfo('Using bundled application data (live sheet unavailable)');
     setLoading(false);
   }, []);
 

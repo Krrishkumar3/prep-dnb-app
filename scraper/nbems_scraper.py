@@ -209,6 +209,9 @@ SUBJECT_MAP = {
     "Emergency Medicine":                   "Emergency Medicine",
     "Family Medicine":                      "Family Medicine",
     "Radiation Oncology":                   "Radiation Oncology",
+    "Radiiotherapy":                        "Radiation Oncology",
+    "Radiotherapy":                         "Radiation Oncology",
+    "Opthalmology":                         "Ophthalmology",
 }
 
 
@@ -234,11 +237,12 @@ def roman_to_int(s: str) -> int:
     s = s.upper().strip()
     return ROMAN.get(s, 0) or int(s) if s.isdigit() else ROMAN.get(s, 1)
 
-# Matches folder like DNB_DEC25, DNB_JUN24, or plain june20, dec19 etc.
+# Matches folder like DNB_DEC25, DNB_JUN24, or plain june20, dec19 etc., or DECEMBER 2015
 SESSION_FOLDER_RE = re.compile(
-    r'QuestionPaper/([A-Za-z_]+)(\d{2,4})/',
+    r'(?:QuestionPaper|pdoof/prev)/([A-Za-z_]+)\s*(\d{2,4})/?',
     re.IGNORECASE
 )
+
 
 
 def parse_session_from_url(pdf_url: str) -> Dict[str, str]:
@@ -247,14 +251,22 @@ def parse_session_from_url(pdf_url: str) -> Dict[str, str]:
     Handles all known formats:
       - New:    /QuestionPaper/DNB_DEC25/  → December 2025
       - Legacy: /QuestionPaper/june20/     → June 2020
+      - Legacy: /pdoof/prev/DECEMBER 2015/ → December 2015
       - Month as full name: /QuestionPaper/DNB_JUNE25/ → June 2025
+      - Filename fallback: PAEDIATRIC-DEC11.pdf → December 2011
     """
     match = SESSION_FOLDER_RE.search(pdf_url)
     if not match:
-        return {"year": "", "session": ""}
-
-    prefix = match.group(1).upper()   # e.g. "DNB_DEC" or "JUNE" or "DEC"
-    yy     = match.group(2)            # e.g. "25" or "20"
+        # Check if year is in filename, like DEC11
+        m2 = re.search(r'-([A-Za-z]+)(\d{2})\.pdf$', pdf_url, re.IGNORECASE)
+        if m2:
+            prefix = m2.group(1).upper()
+            yy = m2.group(2)
+        else:
+            return {"year": "", "session": ""}
+    else:
+        prefix = match.group(1).upper()   # e.g. "DNB_DEC" or "JUNE" or "DEC"
+        yy     = match.group(2)            # e.g. "25" or "20"
 
     # Full month name lookup (handles "JUNE", "DECEMBER", "OCTOBER" etc.)
     FULL_MONTHS = {
@@ -320,11 +332,39 @@ def parse_paper_link(link_text: str, raw_url: str) -> Optional[Dict[str, Any]]:
         # ── Format 2: legacy — no prefix ──
         m2 = LEGACY_PAPER_RE.match(text)
         if not m2:
+            # ── Format 3: pdoof style, e.g. "RHEUMATOLOGY RHEUM P-II DECEMBER 2015" or just "PAEDIATRIC-DEC11"
+            m3 = re.search(r'P[-_]?([IVXivx]+|\d+)', text, re.IGNORECASE)
+            paper_number = roman_to_int(m3.group(1)) if m3 else 1
+            raw_subject = text.split('-')[0].split(' P-')[0].split(' DECEMBER')[0].strip()
+            
+            # If the link text is just "OTORHINOLARYNGOLOGY (ENT)-DEC11.pdf", clean it up
+            if raw_subject.upper().endswith('.PDF'):
+                raw_subject = raw_subject[:-4].strip()
+                
+            # If the raw URL has a clear subject folder, use that instead, but avoid fake subjects
+            if 'pdoof/prev/' in raw_url:
+                parts = raw_url.split('/')
+                # ../pdoof/prev/DECEMBER 2015/RHEUMATOLOGY/RHEUM P-II.pdf
+                part2 = unquote(parts[-2]).strip()
+                part2_lower = part2.lower()
+                
+                # Check if part2 is a valid sounding folder (not "prev", not a month)
+                is_invalid_subject = (
+                    part2_lower == 'prev' or 
+                    part2_lower.startswith('dec') or 
+                    part2_lower.startswith('jun') or
+                    part2_lower.startswith('oct')
+                )
+                
+                if len(parts) >= 3 and not is_invalid_subject:
+                    raw_subject = part2
+        else:
+            raw_subject  = m2.group(1).strip()
+            paper_number = roman_to_int(m2.group(2))
+
+        if not raw_subject:
             return None
-        raw_subject  = m2.group(1).strip()
-        paper_number = roman_to_int(m2.group(2))
-        if paper_number == 0:
-            return None
+            
         # Guess ExamType from subject map; default DNB
         exam_type = "DNB"
 
@@ -348,11 +388,18 @@ def parse_paper_link(link_text: str, raw_url: str) -> Optional[Dict[str, Any]]:
 
 def is_pdf_question_paper(href: str) -> bool:
     """True if the link is an actual question paper PDF."""
-    return (
-        href
-        and PDF_MARKER in href
-        and href.lower().endswith(".pdf")
-    )
+    if not href: return False
+    lower = href.lower()
+    
+    # Needs to be a PDF and have question paper markers
+    if not lower.endswith(".pdf"): return False
+    if "questionpaper" not in lower and "pdoof" not in lower: return False
+    
+    # Exclude other types of PDFs in pdoof
+    if any(x in lower for x in ["bulletin", "press", "performance", "guideline", "notice", "syllabus"]):
+        return False
+        
+    return True
 
 
 def make_absolute(href: str) -> str:
