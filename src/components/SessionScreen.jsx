@@ -1,162 +1,291 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSessions } from '../utils/dataParser';
 import { SUBJECTS } from '../data/subjects';
-import { SkeletonRow } from './LoadingSpinner';
+import { SkeletonCard } from './LoadingSpinner';
 
-const SESSION_ICONS = {
-  June: '☀️', October: '🍂', December: '❄️',
-  January: '🌱', March: '🌸', May: '🌼',
-  April: '🌺', August: '🌿', September: '🍁',
-};
+/* ── Document icon SVG ───────────────────────── */
+function DocIcon({ size = 22, color = '#9CA3AF' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  );
+}
 
+/* ── Pill badge ──────────────────────────────── */
+function Pill({ children }) {
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
+      padding: '3px 10px', borderRadius: 999,
+      background: 'rgba(0,0,0,0.07)', color: '#555',
+      border: '1px solid rgba(0,0,0,0.09)',
+    }}>
+      {children}
+    </span>
+  );
+}
+
+/* ── Session card ────────────────────────────── */
+function SessionCard({ label, badge, onClick, bg, iconBg }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseDown={() => setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onTouchStart={() => setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      style={{
+        background: bg,
+        borderRadius: 28,
+        padding: '20px 18px 18px',
+        textAlign: 'left',
+        boxShadow: pressed
+          ? '0 2px 6px rgba(0,0,0,0.10)'
+          : '0 4px 18px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)',
+        border: 'none',
+        cursor: 'pointer',
+        transform: pressed ? 'scale(0.97)' : 'scale(1)',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        minHeight: 140,
+      }}
+    >
+      {/* Document icon in circular white backdrop */}
+      <div style={{
+        width: 44, height: 44, borderRadius: '50%',
+        background: iconBg || 'rgba(255,255,255,0.85)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+      }}>
+        <DocIcon size={20} color="#6B7280" />
+      </div>
+
+      {/* Title */}
+      <p style={{
+        fontWeight: 800, fontSize: 15, color: '#1F2937',
+        lineHeight: 1.25, flex: 1,
+      }}>
+        {label}
+      </p>
+
+      {/* Badge */}
+      <div><Pill>{badge}</Pill></div>
+    </button>
+  );
+}
+
+/* ── Featured card (top row) ─────────────────── */
+function FeaturedCard({ title, badge, bg, iconBg, disabled, onClick }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseDown={() => !disabled && setPressed(true)}
+      onMouseUp={() => setPressed(false)}
+      onTouchStart={() => !disabled && setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      style={{
+        background: bg,
+        borderRadius: 28,
+        padding: '20px 18px 18px',
+        textAlign: 'left',
+        boxShadow: pressed
+          ? '0 2px 6px rgba(0,0,0,0.09)'
+          : '0 4px 18px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06)',
+        border: 'none',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.55 : 1,
+        transform: pressed ? 'scale(0.97)' : 'scale(1)',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        minHeight: 140,
+      }}
+    >
+      <div style={{
+        width: 44, height: 44, borderRadius: '50%',
+        background: iconBg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.10)',
+      }}>
+        <DocIcon size={20} color="#6B7280" />
+      </div>
+      <p style={{ fontWeight: 800, fontSize: 15, color: '#1F2937', lineHeight: 1.25, flex: 1 }}>
+        {title}
+      </p>
+      <div><Pill>{badge}</Pill></div>
+    </button>
+  );
+}
+
+/* ── Main SessionScreen ──────────────────────── */
 export default function SessionScreen({ examType, tree, loading }) {
   const { subjectName } = useParams();
-  const navigate = useNavigate();
-  const subject  = decodeURIComponent(subjectName);
+  const navigate        = useNavigate();
+  const subject         = decodeURIComponent(subjectName);
+  const [dropOpen, setDropOpen] = useState(false);
 
   const isDNB   = examType === 'DNB';
-  const primary = isDNB ? '#EC4899' : '#3B82F6';
-  const cardBg  = isDNB ? 'var(--dnb-card)'   : 'var(--dipnb-card)';
-  const softBg  = isDNB ? '#FCE7F3'            : '#DBEAFE';
-  const border  = isDNB ? 'rgba(244,114,182,0.25)' : 'rgba(96,165,250,0.25)';
 
-  const subjectInfo = SUBJECTS.find(s => s.name === subject);
-  const sessions    = useMemo(() => getSessions(tree, subject, examType), [tree, subject, examType]);
+  /* All available subjects for the selector dropdown */
+  const allSubjects = useMemo(() => {
+    if (!tree) return [subject];
+    const keys = new Set(Object.keys(tree));
+    return [...keys].sort();
+  }, [tree, subject]);
 
-  const grouped = useMemo(() => {
-    const map = {};
-    sessions.forEach(s => {
-      if (!map[s.year]) map[s.year] = [];
-      map[s.year].push(s);
-    });
-    return Object.entries(map).sort((a, b) => Number(b[0]) - Number(a[0]));
-  }, [sessions]);
+  const sessions = useMemo(() => getSessions(tree, subject, examType), [tree, subject, examType]);
+
+  /* Pink gradient shades for session cards (cycle through) */
+  const PINK_SHADES = [
+    'linear-gradient(135deg, #FBBCCE 0%, #F9A8C0 100%)',
+    'linear-gradient(135deg, #F9A8C0 0%, #F794B2 100%)',
+    'linear-gradient(135deg, #FBBCCE 0%, #FAB0C7 100%)',
+    'linear-gradient(135deg, #F9C0CD 0%, #F9A8BF 100%)',
+  ];
+
+  const BLUE_SHADES = [
+    'linear-gradient(135deg, #BFCEFF 0%, #A5B4FC 100%)',
+    'linear-gradient(135deg, #A5B4FC 0%, #93A5FA 100%)',
+    'linear-gradient(135deg, #C3D0FF 0%, #A8B8FF 100%)',
+    'linear-gradient(135deg, #B8C8FF 0%, #A0B0FF 100%)',
+  ];
+
+  const SHADES = isDNB ? PINK_SHADES : BLUE_SHADES;
 
   return (
-    <div className="page-enter page-root">
-      {/* ── Max-width wrapper ── */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+    <div className="page-enter page-root" style={{ background: '#F4F6FB', minHeight: '100dvh' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', padding: '16px 14px 40px' }}>
 
-        {/* ── Subject hero card ── */}
-        <div
-          className="rounded-2xl p-5 mb-6"
-          style={{ background: cardBg, border: `1px solid ${border}` }}
-        >
-          <div className="flex items-center gap-4">
-            <div
-              className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-4xl shrink-0"
-              style={{ background: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}
-            >
-              {subjectInfo?.icon || '📚'}
+        {/* ── Subject selector ──────────────── */}
+        <div style={{ position: 'relative', marginBottom: 20 }}>
+          <button
+            onClick={() => setDropOpen(o => !o)}
+            style={{
+              width: '100%',
+              background: 'white',
+              borderRadius: 18,
+              padding: '15px 18px',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.09), 0 1px 4px rgba(0,0,0,0.05)',
+              border: 'none', cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontWeight: 700, fontSize: 16, color: '#1F2937' }}>{subject}</span>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #F97316, #FBBF24)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 2px 8px rgba(249,115,22,0.35)',
+              flexShrink: 0,
+            }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="white" strokeWidth="3" strokeLinecap="round">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">
-                {subjectInfo?.category || examType}
-              </p>
-              <h1 className="font-black text-xl sm:text-2xl text-gray-800 leading-tight truncate">
-                {subject}
-              </h1>
-              <p className="text-sm text-gray-500 mt-0.5">{examType} Question Bank</p>
-            </div>
-          </div>
+          </button>
 
-          {!loading && (
-            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/60">
-              <span className="badge text-white" style={{ background: primary }}>
-                {sessions.length} session{sessions.length !== 1 ? 's' : ''}
-              </span>
-              <span className="badge" style={{ background: 'white', color: '#6B7280', border: '1px solid #E5E7EB' }}>
-                {sessions.reduce((a, s) => a + s.papers.length, 0)} papers total
-              </span>
-              {sessions.length > 0 && (
-                <span className="badge" style={{ background: 'white', color: '#6B7280', border: '1px solid #E5E7EB' }}>
-                  {grouped[grouped.length - 1]?.[0]} – {grouped[0]?.[0]}
-                </span>
-              )}
+          {/* Dropdown */}
+          {dropOpen && (
+            <div style={{
+              position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0,
+              background: 'white', borderRadius: 18, zIndex: 40,
+              boxShadow: '0 12px 40px rgba(0,0,0,0.14)',
+              maxHeight: 300, overflowY: 'auto',
+              border: '1px solid rgba(0,0,0,0.06)',
+            }}>
+              {allSubjects.map(s => (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setDropOpen(false);
+                    navigate(`/subject/${encodeURIComponent(s)}`);
+                  }}
+                  style={{
+                    width: '100%', textAlign: 'left',
+                    padding: '13px 18px',
+                    fontWeight: s === subject ? 800 : 500,
+                    fontSize: 14, color: s === subject ? '#9B6FD4' : '#374151',
+                    background: s === subject ? 'rgba(155,111,212,0.07)' : 'transparent',
+                    border: 'none', cursor: 'pointer',
+                    transition: 'background 0.1s ease',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(0,0,0,0.04)'}
+                  onMouseLeave={e => e.currentTarget.style.background = s === subject ? 'rgba(155,111,212,0.07)' : 'transparent'}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {/* ── Session list ── */}
+        {/* ── Featured cards row ─────────────── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+          <FeaturedCard
+            title="Important Topics"
+            badge="List"
+            bg="linear-gradient(135deg, #FFE0A3 0%, #FFD080 100%)"
+            iconBg="rgba(255,255,255,0.80)"
+            disabled
+          />
+          <FeaturedCard
+            title="MCQ Mode"
+            badge="Quiz"
+            bg="linear-gradient(135deg, #E0D0FF 0%, #CDB8FF 100%)"
+            iconBg="rgba(255,255,255,0.80)"
+            disabled
+          />
+        </div>
+
+        {/* ── Session cards grid ─────────────── */}
         {loading ? (
-          <div className="flex flex-col gap-3">
-            {Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="skeleton" style={{ borderRadius: 28, minHeight: 140 }} />
+            ))}
           </div>
-        ) : grouped.length === 0 ? (
-          <div className="text-center py-20">
-            <div className="text-5xl mb-4">📭</div>
-            <p className="text-gray-600 font-semibold text-lg">No sessions found</p>
-            <p className="text-gray-400 text-sm mt-1">
-              Try switching to {isDNB ? 'DipNB' : 'DNB'} or check back later
+        ) : sessions.length === 0 ? (
+          <div style={{ textAlign: 'center', paddingTop: 60 }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>📭</div>
+            <p style={{ fontWeight: 700, color: '#374151', fontSize: 16 }}>No sessions found</p>
+            <p style={{ color: '#9CA3AF', fontSize: 13, marginTop: 4 }}>
+              Try switching to {isDNB ? 'DipNB' : 'DNB'}
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-6">
-            {grouped.map(([year, yearSessions]) => (
-              <div key={year}>
-                {/* Year header */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div
-                    className="w-1.5 h-5 rounded-full shrink-0"
-                    style={{ background: primary }}
-                  />
-                  <h2 className="font-black text-gray-700 text-lg">{year}</h2>
-                  <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">
-                    {yearSessions.length} session{yearSessions.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-
-                {/* Session rows — 1 col mobile, 2 col sm+ */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {yearSessions.map(s => (
-                    <button
-                      key={`${s.year}-${s.session}`}
-                      onClick={() =>
-                        navigate(
-                          `/subject/${encodeURIComponent(subject)}/session/${s.year}/${encodeURIComponent(s.session)}`
-                        )
-                      }
-                      className="session-row flex items-center justify-between p-4 rounded-2xl bg-white border text-left"
-                      style={{ borderColor: border, boxShadow: 'var(--shadow-soft)' }}
-                    >
-                      {/* Icon + label */}
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0"
-                          style={{ background: softBg }}
-                        >
-                          {SESSION_ICONS[s.session] || '📅'}
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-800 text-sm leading-tight">
-                            {s.session} {s.year}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Paper 1 – Paper {Math.max(...s.papers)}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Papers badge + chevron */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="badge text-white" style={{ background: primary }}>
-                          {s.papers.length} paper{s.papers.length !== 1 ? 's' : ''}
-                        </span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                          stroke="#9CA3AF" strokeWidth="2.5" strokeLinecap="round">
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {sessions.map((s, i) => (
+              <SessionCard
+                key={`${s.year}-${s.session}`}
+                label={`${s.session} ${s.year}`}
+                badge={examType}
+                bg={SHADES[i % SHADES.length]}
+                iconBg="rgba(255,255,255,0.82)"
+                onClick={() =>
+                  navigate(
+                    `/subject/${encodeURIComponent(subject)}/session/${s.year}/${encodeURIComponent(s.session)}`
+                  )
+                }
+              />
             ))}
           </div>
         )}
 
-        <div className="h-12" />
       </div>
     </div>
   );

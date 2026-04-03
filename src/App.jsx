@@ -17,10 +17,8 @@ function AppContent() {
     <div
       style={{
         minHeight: '100dvh',
-        background: isDNB
-          ? 'linear-gradient(160deg, #FDF2F8 0%, #F9FAFB 60%, #F0F7FF 100%)'
-          : 'linear-gradient(160deg, #EFF6FF 0%, #F9FAFB 60%, #FDF2F8 100%)',
-        transition: 'background 0.5s ease',
+        background: '#F4F6FB',
+        transition: 'background 0.4s ease',
       }}
     >
       <Header
